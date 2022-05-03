@@ -1,0 +1,49 @@
+[% USE KohaDates %]
+[% INCLUDE 'doc-head-open.inc' %]
+ <title>Koha: Kitchen Sink Plugin: Configuration</title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+<body>
+[% INCLUDE 'header.inc' %]
+[% INCLUDE 'cat-search.inc' %]
+
+<div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">Home</a> &rsaquo; <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a> &rsaquo; Barcode Prefixer &rsaquo; Configuration</div>
+
+<div id="doc3">
+    <form method="get">
+        <!-- Always pass these two parameters so the plugin system knows what to execute! -->
+        <input type="hidden" name="class" value="[% CLASS %]"/>
+        <input type="hidden" name="method" value="[% METHOD %]"/>
+
+        [% IF yaml_error %]
+            <h1 style="color:red">Error: YAML is invalid!</h1>
+        [% END %]
+
+        <p>
+          <label for="yaml_config">Configuration:</label>
+          <br/>
+          <textarea name="yaml_config" rows="20" cols="80">[% yaml_config %]</textarea>
+        </p>
+
+        <input type="hidden" name="save" value="1" />
+
+        <input type="submit" value="Save configuration" />
+    </form>
+
+<br/><br/>
+<h3>Example configuration:</h3>
+<pre>
+item_barcode_length: 14
+patron_barcode_length: 14
+libraries:
+  MPL:
+    item_prefix: 1001
+    patron_prefix: 1002
+  CPL:
+    item_prefix: 2001
+    patron_prefix: 2002
+  SPL:
+    item_prefix: 3001
+    patron_prefix: 3002
+</pre>
+[% INCLUDE 'intranet-bottom.inc' %]

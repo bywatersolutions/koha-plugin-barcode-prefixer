@@ -1,0 +1,15 @@
+{
+  "name": "koha-pluginbarcode-prefixer",
+  "version": "0.0.0",
+  "previous_version": "0.0.0",
+  "description": "A plugin for Koha to help libraries with overlapping patron cardnumbers and/or item barcodes between libraries",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bywatersolutions/koha-pluginbarcode-prefixer.git"
+  },
+  "author": "Kyle M Hall <kyle@bywatersolutions.com>",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/bywatersolutions/koha-pluginbarcode-prefixer/issues"
+  }
+}
