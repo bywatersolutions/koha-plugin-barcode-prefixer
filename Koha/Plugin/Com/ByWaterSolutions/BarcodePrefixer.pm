@@ -37,7 +37,57 @@ sub new {
 sub patron_barcode_transform {
     my ( $self, $barcode ) = @_;
 
-    $self->barcode_transform( 'patron', $barcode );
+    if ( $$barcode ) {
+        $self->barcode_transform( 'patron', $barcode );
+    } else { # fixup_cardnumber, Autogenerate next cardnumber from highest value found in database
+        my $branchcode = C4::Context->userenv->{branch};
+        return unless $branchcode;
+
+        my $yaml = $self->retrieve_data('yaml_config');
+        return $barcode unless $yaml;
+
+        my $data;
+        eval { $data = YAML::Load( $yaml ); };
+        return unless $data;
+
+        my $barcode_length = $data->{patron_barcode_length};
+        return unless $barcode_length;
+
+        my $barcode_prefix = $data->{libraries}->{$branchcode}->{patron_prefix};;
+        return unless $barcode_prefix;
+
+        my $max = Koha::Patrons->search(
+            {
+                -and => [
+                    cardnumber => { -regexp => '^-?[0-9]+$' },
+                    cardnumber => { -regexp => "^$barcode_prefix" },
+                    \[ 'LENGTH(cardnumber) = ?', $barcode_length ],
+                ]
+            },
+            {
+                select => \'CAST(cardnumber AS SIGNED)',
+                as     => ['cast_cardnumber']
+            }
+        )->_resultset->get_column('cast_cardnumber')->max;
+        $max =~ s/^$barcode_prefix//;
+        my $next = $max + 1;
+
+        my $prefix_len  = length( $barcode_prefix );
+        my $next_len    = length($next);
+        my $padding_len = $barcode_length - $prefix_len - $next_len;
+        my $padding     = '0' x $padding_len;
+
+        my $cardnumber = $barcode_prefix . $padding . $next;
+
+        while ( my $patron = Koha::Patrons->find( { cardnumber => $cardnumber } ) )
+        {
+            $next++;
+            $next_len    = length($next);
+            $padding_len = $patronbarcodelength - $prefix_len - $next_len;
+            $padding     = '0' x $padding_len;
+            $cardnumber  = $barcode_prefix . $padding . $next;
+        }
+    }
 }
 
 sub item_barcode_transform {
@@ -51,6 +101,9 @@ sub barcode_transform {
 
     my $barcode = $$barcode_ref;
 
+    my $branchcode = C4::Context->userenv->{branch};
+    return unless $branchcode;
+
     my $yaml = $self->retrieve_data('yaml_config');
     return $barcode unless $yaml;
 
@@ -58,15 +111,12 @@ sub barcode_transform {
     eval { $data = YAML::Load( $yaml ); };
     return unless $data;
 
-    my $item_barcode_length = $data->{ $type . "_barcode_length"};
-    return unless $item_barcode_length;
+    my $barcode_length = $data->{ $type . "_barcode_length"};
+    return unless $barcode_length;
 
-    my $branchcode = C4::Context->userenv->{branch};
-    return unless $branchcode;
-
-    if ( length($barcode) < $item_barcode_length ) {
+    if ( length($barcode) < $barcode_length ) {
         my $prefix  = $data->{libraries}->{$branchcode}->{ $type . "_prefix"};
-        my $padding = $item_barcode_length - length($prefix) - length($barcode);
+        my $padding = $barcode_length - length($prefix) - length($barcode);
         $barcode = $prefix . '0' x $padding . $barcode if ( $padding >= 0 );
     }
 
