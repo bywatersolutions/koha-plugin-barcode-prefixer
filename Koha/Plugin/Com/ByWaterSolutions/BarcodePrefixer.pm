@@ -83,7 +83,7 @@ sub patron_barcode_transform {
         {
             $next++;
             $next_len    = length($next);
-            $padding_len = $patronbarcodelength - $prefix_len - $next_len;
+            $padding_len = $barcode_length - $prefix_len - $next_len;
             $padding     = '0' x $padding_len;
             $cardnumber  = $barcode_prefix . $padding . $next;
         }
