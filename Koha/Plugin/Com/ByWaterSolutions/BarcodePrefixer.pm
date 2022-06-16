@@ -101,26 +101,30 @@ sub barcode_transform {
 
     my $barcode = $$barcode_ref;
 
-    my $branchcode = C4::Context->userenv->{branch};
-    return unless $branchcode;
+    if ( $barcode =~ /^\d*$/ ) {    # Only transform all digit barcodes
 
-    my $yaml = $self->retrieve_data('yaml_config');
-    return $barcode unless $yaml;
+        my $branchcode = C4::Context->userenv->{branch};
+        return unless $branchcode;
 
-    my $data;
-    eval { $data = YAML::Load( $yaml ); };
-    return unless $data;
+        my $yaml = $self->retrieve_data('yaml_config');
+        return $barcode unless $yaml;
 
-    my $barcode_length = $data->{ $type . "_barcode_length"};
-    return unless $barcode_length;
+        my $data;
+        eval { $data = YAML::Load($yaml); };
+        return unless $data;
 
-    if ( length($barcode) < $barcode_length ) {
-        my $prefix  = $data->{libraries}->{$branchcode}->{ $type . "_prefix"};
-        my $padding = $barcode_length - length($prefix) - length($barcode);
-        $barcode = $prefix . '0' x $padding . $barcode if ( $padding >= 0 );
+        my $barcode_length = $data->{ $type . "_barcode_length" };
+        return unless $barcode_length;
+
+        if ( length($barcode) < $barcode_length ) {
+            my $prefix =
+              $data->{libraries}->{$branchcode}->{ $type . "_prefix" };
+            my $padding = $barcode_length - length($prefix) - length($barcode);
+            $barcode = $prefix . '0' x $padding . $barcode if ( $padding >= 0 );
+        }
+
+        $$barcode_ref = $barcode;
     }
-
-    $$barcode_ref = $barcode;
 }
 
 sub configure {
