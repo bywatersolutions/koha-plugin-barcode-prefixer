@@ -189,9 +189,9 @@ sub install() {
     );
 
     require Koha::Config::SysPrefs;
-    my $itembarcodelength = Koha::Config::SysPrefs->find('itembarcodelength');
+    $itembarcodelength = Koha::Config::SysPrefs->find('itembarcodelength');
     $itembarcodelength->delete() if $itembarcodelength;
-    my $patronbarcodelength = Koha::Config::SysPrefs->find('patronbarcodelength');
+    $patronbarcodelength = Koha::Config::SysPrefs->find('patronbarcodelength');
     $patronbarcodelength->delete() if $patronbarcodelength;
 
     return 1;
