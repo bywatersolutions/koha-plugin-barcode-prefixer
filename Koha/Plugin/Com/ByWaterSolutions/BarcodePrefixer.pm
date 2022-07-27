@@ -39,7 +39,7 @@ sub patron_barcode_transform {
 
     if ( $$barcode ) {
         $self->barcode_transform( 'patron', $barcode );
-    } else { # fixup_cardnumber, Autogenerate next cardnumber from highest value found in database
+    } elsif (C4::Context->preference("autoMemberNum")) { # fixup_cardnumber, Autogenerate next cardnumber from highest value found in database
         my $branchcode = C4::Context->userenv->{branch};
         return unless $branchcode;
 
