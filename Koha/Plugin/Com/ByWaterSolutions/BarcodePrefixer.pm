@@ -95,7 +95,9 @@ sub patron_barcode_transform {
 sub item_barcode_transform {
     my ( $self, $barcode ) = @_;
 
-    $self->barcode_transform( 'item', $barcode );
+    if ( defined $$barcode && $$barcode ne q{} ) {
+        $self->barcode_transform( 'item', $barcode );
+    }
 }
 
 sub barcode_transform {
