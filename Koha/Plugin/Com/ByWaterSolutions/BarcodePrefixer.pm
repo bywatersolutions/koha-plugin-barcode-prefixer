@@ -98,8 +98,6 @@ sub item_barcode_transform {
     if ( $$barcode ) {
         $self->barcode_transform( 'item', $barcode );
     } else { # fixup_cardnumber, Autogenerate next cardnumber from highest value found in database
-        my $auto_barcode = C4::Context->preference('autoBarcode');
-
         my $branchcode = C4::Context->userenv->{branch};
         return unless $branchcode;
 
