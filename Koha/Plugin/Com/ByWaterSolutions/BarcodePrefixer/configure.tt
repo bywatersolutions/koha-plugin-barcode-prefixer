@@ -33,6 +33,7 @@
 <br/><br/>
 <h3>Example configuration:</h3>
 <pre>
+auto_barcode: incremental # incremental or none
 always_transform: 0 # set to 1 to trasform non-numeric barcodes
 item_barcode_length: 14
 patron_barcode_length: 14
