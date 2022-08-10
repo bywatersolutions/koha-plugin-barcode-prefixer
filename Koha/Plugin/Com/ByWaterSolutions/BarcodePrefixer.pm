@@ -95,7 +95,65 @@ sub patron_barcode_transform {
 sub item_barcode_transform {
     my ( $self, $barcode ) = @_;
 
-    $self->barcode_transform( 'item', $barcode );
+    if ( $$barcode ) {
+        $self->barcode_transform( 'item', $barcode );
+    } else { # fixup_cardnumber, Autogenerate next cardnumber from highest value found in database
+        my $auto_barcode = C4::Context->preference('autoBarcode');
+
+        my $branchcode = C4::Context->userenv->{branch};
+        return unless $branchcode;
+
+        my $yaml = $self->retrieve_data('yaml_config');
+        return $barcode unless $yaml;
+
+        my $data;
+        eval { $data = YAML::Load( $yaml ); };
+        return unless $data;
+
+        my $auto_barcode = $data->{auto_barcode};
+        return unless $auto_barcode;
+        return unless $auto_barcode eq 'incremental';
+
+        my $barcode_length = $data->{item_barcode_length};
+        return unless $barcode_length;
+
+        my $barcode_prefix = $data->{libraries}->{$branchcode}->{item_prefix};;
+        return unless $barcode_prefix;
+
+        my $max = Koha::Items->search(
+            {
+                -and => [
+                    barcode => { -regexp => '^-?[0-9]+$' },
+                    barcode => { -regexp => "^$barcode_prefix" },
+                    \[ 'LENGTH(barcode) = ?', $barcode_length ],
+                ]
+            },
+            {
+                select => \'CAST(barcode AS SIGNED)',
+                as     => ['cast_barcode']
+            }
+        )->_resultset->get_column('cast_barcode')->max;
+        $max =~ s/^$barcode_prefix//;
+        my $next = $max + 1;
+
+        my $prefix_len  = length( $barcode_prefix );
+        my $next_len    = length($next);
+        my $padding_len = $barcode_length - $prefix_len - $next_len;
+        my $padding     = '0' x $padding_len;
+
+        my $generated_barcode = $barcode_prefix . $padding . $next;
+
+        while ( my $item = Koha::Items->find( { barcode => $generated_barcode } ) )
+        {
+            $next++;
+            $next_len    = length($next);
+            $padding_len = $barcode_length - $prefix_len - $next_len;
+            $padding     = '0' x $padding_len;
+            $generated_barcode  = $barcode_prefix . $padding . $next;
+        }
+
+        $$barcode = $generated_barcode;
+    }
 }
 
 sub barcode_transform {
