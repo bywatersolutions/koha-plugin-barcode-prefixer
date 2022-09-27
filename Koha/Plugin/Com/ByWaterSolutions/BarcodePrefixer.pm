@@ -40,7 +40,7 @@ sub patron_barcode_transform {
     if ( $$barcode ) {
         $self->barcode_transform( 'patron', $barcode );
     } elsif (C4::Context->preference("autoMemberNum")) { # fixup_cardnumber, Autogenerate next cardnumber from highest value found in database
-        my $branchcode = C4::Context->userenv->{branch};
+        my $branchcode = C4::Context->userenv ? C4::Context->userenv->{branch} : undef;
         return unless $branchcode;
 
         my $yaml = $self->retrieve_data('yaml_config');
@@ -98,7 +98,7 @@ sub item_barcode_transform {
     if ( $$barcode ) {
         $self->barcode_transform( 'item', $barcode );
     } else { # Auto-generate next item barcode from highest value found in database
-        my $branchcode = C4::Context->userenv->{branch};
+        my $branchcode = C4::Context->userenv ? C4::Context->userenv->{branch} : undef;
         return unless $branchcode;
 
         my $yaml = $self->retrieve_data('yaml_config');
@@ -159,7 +159,7 @@ sub barcode_transform {
 
     my $barcode = $$barcode_ref;
 
-    my $branchcode = C4::Context->userenv->{branch};
+    my $branchcode = C4::Context->userenv ? C4::Context->userenv->{branch} : undef;
     return unless $branchcode;
 
     my $yaml = $self->retrieve_data('yaml_config');
