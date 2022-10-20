@@ -88,7 +88,8 @@ sub patron_barcode_transform {
             $cardnumber  = $barcode_prefix . $padding . $next;
         }
 
-        $$barcode = $cardnumber;
+        # Calling code in Koha increments the cardnumber, so after we find the correct next cardnumber subtract one before returning it
+        $$barcode = --$cardnumber;
     }
 }
 
