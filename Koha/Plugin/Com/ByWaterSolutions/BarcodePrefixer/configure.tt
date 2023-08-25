@@ -37,10 +37,20 @@ auto_barcode: incremental # incremental or none
 always_transform: 0 # set to 1 to trasform non-numeric barcodes
 item_barcode_length: 14
 patron_barcode_length: 14
+only_prefix_if: <regex> # Optional, skip unless the barcode matches this regular expression ( e.g. "^1" would only prefix barcodes starting with 1 )
+only_prefix_if_patron: <regex> # Same but for patron cardnumbers only
+only_prefix_if_item: <regex> # Same but only for item barcodes
+never_prefix_if: <regex> # Optional, skip if the barcode matches this regular expression ( e.g. "^2" would only prefix barcodes *not* starting with 2 )
+never_prefix_if_patron: <regex> # Same but for patron cardnumbers only
+never_prefix_if_item: <regex> # Same but only for item barcodes
 libraries:
   MPL:
     item_prefix: 1001
     patron_prefix: 1002
+    only_prefix_if: <regex> # Optional same as above but branch level
+    only_prefix_if_patron: <regex>
+    only_prefix_if_item: <regex>
+    never_prefix_if: <regex>
   CPL:
     item_prefix: 2001
     patron_prefix: 2002
@@ -48,4 +58,9 @@ libraries:
     item_prefix: 3001
     patron_prefix: 3002
 </pre>
+
+<p>
+All regular expression apply so a barcode will not be prefixd unless it matches all "only_" express and no "never_" expressions that would apply to it.
+</p>
+
 [% INCLUDE 'intranet-bottom.inc' %]

@@ -23,6 +23,8 @@ our $metadata = {
     description     => 'Prefix scanned barcodes',
 };
 
+our $DEBUG = $ENV{BCP_DEBUG};
+
 sub new {
     my ( $class, $args ) = @_;
 
@@ -173,7 +175,41 @@ sub barcode_transform {
     # Only transform all digit barcodes by default
     return unless $data->{always_transform} || $barcode =~ /^\d*$/;
 
+    # Skip this barcode if it matches any never_prefix_if's
+    my @never_regexes = ( 
+            $data->{never_prefix_if}, 
+            $data->{"never_prefix_if_$type"},
+            $data->{libraries}->{$branchcode}->{never_prefix_if},
+            $data->{libraries}->{$branchcode}->{"never_prefix_if_$type"}
+    );
+    for ( @never_regexes ) {
+        next unless $_;
+        warn "ONLY: $_";
+        if ( $barcode =~ /$_/ ) {
+            warn "NOT PREFIXING '$barcode' BECAUSE IT MATCHES $_" if $DEBUG;
+            return;
+        }
+    }
+
+    # Skip this barcode unless it matches all only_prefix_if's
+    my @only_regexes = ( 
+            $data->{only_prefix_if}, 
+            $data->{"only_prefix_if_$type"},
+            $data->{libraries}->{$branchcode}->{only_prefix_if},
+            $data->{libraries}->{$branchcode}->{"only_prefix_if_$type"}
+    );
+    for ( @only_regexes ) {
+        next unless $_;
+        warn "ONLY: $_";
+        unless ( $barcode =~ /$_/ ) {
+            warn "NOT PREFIXING '$barcode' BECAUSE IT DOES NOT MATCH $_" if $DEBUG;
+            return;
+        }
+    }
+
+    warn "TEST 3";
     my $barcode_length = $data->{ $type . "_barcode_length" };
+    warn "LEN: $barcode_length";
     return unless $barcode_length;
 
     if ( length($barcode) < $barcode_length ) {
