@@ -184,7 +184,6 @@ sub barcode_transform {
     );
     for ( @never_regexes ) {
         next unless $_;
-        warn "ONLY: $_";
         if ( $barcode =~ /$_/ ) {
             warn "NOT PREFIXING '$barcode' BECAUSE IT MATCHES $_" if $DEBUG;
             return;
@@ -200,16 +199,13 @@ sub barcode_transform {
     );
     for ( @only_regexes ) {
         next unless $_;
-        warn "ONLY: $_";
         unless ( $barcode =~ /$_/ ) {
             warn "NOT PREFIXING '$barcode' BECAUSE IT DOES NOT MATCH $_" if $DEBUG;
             return;
         }
     }
 
-    warn "TEST 3";
     my $barcode_length = $data->{ $type . "_barcode_length" };
-    warn "LEN: $barcode_length";
     return unless $barcode_length;
 
     if ( length($barcode) < $barcode_length ) {
