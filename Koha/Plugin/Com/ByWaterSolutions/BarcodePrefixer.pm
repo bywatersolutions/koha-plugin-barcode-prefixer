@@ -205,10 +205,16 @@ sub barcode_transform {
         }
     }
 
+    my $prefix_without_padding = $data->{libraries}->{$branchcode}->{prefix_without_padding}
     my $barcode_length = $data->{ $type . "_barcode_length" };
-    return unless $barcode_length;
+    return unless $barcode_length || $prefix_without_padding;
 
-    if ( length($barcode) < $barcode_length ) {
+    if ( $prefix_without_padding ) {
+        $barcode = $prefix . $barcode;
+
+        $$barcode_ref = $barcode;
+    }
+    elsif ( length($barcode) < $barcode_length ) {
         my $prefix =
           $data->{libraries}->{$branchcode}->{ $type . "_prefix" };
         my $padding = $barcode_length - length($prefix) - length($barcode);
