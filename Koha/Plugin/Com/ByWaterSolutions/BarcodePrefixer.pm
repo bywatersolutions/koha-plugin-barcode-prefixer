@@ -52,10 +52,10 @@ sub patron_barcode_transform {
         eval { $data = YAML::Load( $yaml ); };
         return unless $data;
 
-        my $barcode_length = $data->{patron_barcode_length};
+        my $barcode_length = $data->{libraries}->{$branchcode}->{patron_barcode_length} || $data->{patron_barcode_length};
         return unless $barcode_length;
 
-        my $barcode_prefix = $data->{libraries}->{$branchcode}->{patron_prefix};;
+        my $barcode_prefix = $data->{libraries}->{$branchcode}->{patron_prefix};
         return unless $barcode_prefix;
 
         my $max = Koha::Patrons->search(
@@ -115,7 +115,7 @@ sub item_barcode_transform {
         return unless $auto_barcode;
         return unless $auto_barcode eq 'incremental';
 
-        my $barcode_length = $data->{item_barcode_length};
+        my $barcode_length = $data->{libraries}->{$branchcode}->{item_barcode_length} || $data->{item_barcode_length};
         return unless $barcode_length;
 
         my $barcode_prefix = $data->{libraries}->{$branchcode}->{item_prefix};;
@@ -174,6 +174,10 @@ sub barcode_transform {
 
     # Only transform all digit barcodes by default
     return unless $data->{always_transform} || $barcode =~ /^\d*$/;
+    
+    my $prefix_without_padding = $data->{libraries}->{$branchcode}->{prefix_without_padding}
+    my $barcode_length = $data->{libraries}->{$branchcode}->{ $type . "_barcode_length" } || $data->{ $type . "_barcode_length" };
+    return unless $barcode_length || $prefix_without_padding;
 
     # Skip this barcode if it matches any never_prefix_if's
     my @never_regexes = ( 
@@ -204,10 +208,6 @@ sub barcode_transform {
             return;
         }
     }
-
-    my $prefix_without_padding = $data->{libraries}->{$branchcode}->{prefix_without_padding}
-    my $barcode_length = $data->{ $type . "_barcode_length" };
-    return unless $barcode_length || $prefix_without_padding;
 
     if ( $prefix_without_padding ) {
         $barcode = $prefix . $barcode;
