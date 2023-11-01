@@ -175,7 +175,7 @@ sub barcode_transform {
     # Only transform all digit barcodes by default
     return unless $data->{always_transform} || $barcode =~ /^\d*$/;
     
-    my $prefix_without_padding = $data->{libraries}->{$branchcode}->{prefix_without_padding}
+    my $prefix_without_padding = $data->{libraries}->{$branchcode}->{prefix_without_padding};
     my $barcode_length = $data->{libraries}->{$branchcode}->{ $type . "_barcode_length" } || $data->{ $type . "_barcode_length" };
     return unless $barcode_length || $prefix_without_padding;
 
@@ -209,14 +209,14 @@ sub barcode_transform {
         }
     }
 
+    my $prefix = $data->{libraries}->{$branchcode}->{ $type . "_prefix" };
+
     if ( $prefix_without_padding ) {
         $barcode = $prefix . $barcode;
 
         $$barcode_ref = $barcode;
     }
     elsif ( length($barcode) < $barcode_length ) {
-        my $prefix =
-          $data->{libraries}->{$branchcode}->{ $type . "_prefix" };
         my $padding = $barcode_length - length($prefix) - length($barcode);
         $barcode = $prefix . '0' x $padding . $barcode if ( $padding >= 0 );
 
