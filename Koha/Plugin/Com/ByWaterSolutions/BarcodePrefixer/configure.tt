@@ -54,6 +54,7 @@ libraries:
   CPL:
     item_prefix: 2001
     patron_prefix: 2002
+    prefix_without_padding: 1 # Optional, let an item be prefixed all the time, even if the *_barcode_length is not set or is 0
   SPL:
     item_prefix: 3001
     patron_prefix: 3002
