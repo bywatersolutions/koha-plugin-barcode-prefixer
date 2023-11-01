@@ -45,6 +45,8 @@ never_prefix_if_patron: <regex> # Same but for patron cardnumbers only
 never_prefix_if_item: <regex> # Same but only for item barcodes
 libraries:
   MPL:
+    item_barcode_length: 20 # barcode lengths can be set at the branch level
+    patron_barcode_length: 22
     item_prefix: 1001
     patron_prefix: 1002
     only_prefix_if: <regex> # Optional same as above but branch level
