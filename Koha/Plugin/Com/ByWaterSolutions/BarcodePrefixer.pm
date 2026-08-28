@@ -90,8 +90,15 @@ sub patron_barcode_transform {
             $cardnumber  = $barcode_prefix . $padding . $next;
         }
 
-        # Calling code in Koha increments the cardnumber, so after we find the correct next cardnumber subtract one before returning it
-        $$barcode = --$cardnumber;
+        # Before Bug 34000, Koha's fixup_cardnumber increments the cardnumber we return, so
+        # we need to subtract one before returning it. Bug 34000 makes fixup_cardnumber use
+        # the returned cardnumber as-is; the 'autoMemberNumValue' syspref it adds is how we
+        # detect that behavior, since the bug was backported to some stable branches.
+        if ( defined C4::Context->preference('autoMemberNumValue') ) {
+            $$barcode = $cardnumber;
+        } else {
+            $$barcode = --$cardnumber;
+        }
     }
 }
 
