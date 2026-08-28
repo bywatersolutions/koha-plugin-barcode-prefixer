@@ -11,7 +11,8 @@
 
 <div id="doc3">
     <form method="post">
-        [% INCLUDE 'csrf-token.inc' %]
+        [%# Koha before 23.11 has no 'csrf-token.inc' and doesn't check for a CSRF token %]
+        [% TRY %][% INCLUDE 'csrf-token.inc' %][% CATCH file %][% END %]
         <!-- Always pass these two parameters so the plugin system knows what to execute! -->
         <input type="hidden" name="class" value="[% CLASS %]"/>
         <input type="hidden" name="method" value="[% METHOD %]"/>
