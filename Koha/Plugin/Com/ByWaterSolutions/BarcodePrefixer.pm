@@ -108,7 +108,7 @@ sub next_patron_cardnumber {
             select => \'CAST(cardnumber AS SIGNED)',
             as     => ['cast_cardnumber']
         }
-    )->_resultset->get_column('cast_cardnumber')->max;
+    )->_resultset->get_column('cast_cardnumber')->max // 0;
     $max =~ s/^$barcode_prefix//;
     my $next = $max + 1;
 
@@ -225,7 +225,7 @@ sub item_barcode_transform {
                 select => \'CAST(barcode AS SIGNED)',
                 as     => ['cast_barcode']
             }
-        )->_resultset->get_column('cast_barcode')->max;
+        )->_resultset->get_column('cast_barcode')->max // 0;
         $max =~ s/^$barcode_prefix//;
         my $next = $max + 1;
 
