@@ -1,0 +1,66 @@
+{
+    "/next_patron_cardnumber": {
+        "get": {
+            "x-mojo-to": "Com::ByWaterSolutions::BarcodePrefixer::API#next_patron_cardnumber",
+            "operationId": "barcodePrefixerNextPatronCardnumber",
+            "tags": [
+                "patrons"
+            ],
+            "parameters": [
+                {
+                    "name": "branchcode",
+                    "in": "query",
+                    "description": "Library whose patron prefix should be used",
+                    "required": true,
+                    "type": "string"
+                }
+            ],
+            "produces": [
+                "application/json"
+            ],
+            "responses": {
+                "200": {
+                    "description": "The next available patron cardnumber for the library, null if the library has no patron prefix",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "cardnumber": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "403": {
+                    "description": "Access forbidden",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "500": {
+                    "description": "Internal server error",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "error": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "x-koha-authorization": {
+                "permissions": {
+                    "borrowers": "edit_borrowers"
+                }
+            }
+        }
+    }
+}

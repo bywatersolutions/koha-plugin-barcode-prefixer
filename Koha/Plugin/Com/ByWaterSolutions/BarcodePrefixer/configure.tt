@@ -40,6 +40,7 @@ always_transform: 0 # set to 1 to trasform non-numeric barcodes
 item_barcode_length: 14
 patron_barcode_length: 14
 prefill_patron_cardnumber: 0 # Optional, set to 1 to fill in the next auto-generated cardnumber on the patron entry form when autoMemberNum is enabled, can also be set at the branch level
+patron_prefix_library: login # Optional, set to "form" to use the library chosen on the patron entry form for new patron cardnumbers instead of the logged in library
 only_prefix_if: <regex> # Optional, skip unless the barcode matches this regular expression ( e.g. "^1" would only prefix barcodes starting with 1 )
 only_prefix_if_patron: <regex> # Same but for patron cardnumbers only
 only_prefix_if_item: <regex> # Same but only for item barcodes

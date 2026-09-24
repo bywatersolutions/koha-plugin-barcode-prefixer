@@ -8,6 +8,8 @@ use C4::Context;
 use C4::Auth;
 
 use YAML qw(Load Dump);
+use CGI;
+use Mojo::JSON qw(decode_json);
 
 our $VERSION = "{VERSION}";
 our $MINIMUM_VERSION = "{MINIMUM_VERSION}";
@@ -42,15 +44,15 @@ sub patron_barcode_transform {
     if ( $$barcode ) {
         $self->barcode_transform( 'patron', $barcode );
     } elsif (C4::Context->preference("autoMemberNum")) { # fixup_cardnumber, Autogenerate next cardnumber from highest value found in database
-        my $branchcode = C4::Context->userenv ? C4::Context->userenv->{branch} : undef;
-        return unless $branchcode;
-
         my $yaml = $self->retrieve_data('yaml_config');
         return $barcode unless $yaml;
 
         my $data;
         eval { $data = YAML::Load( $yaml ); };
         return unless $data;
+
+        my $branchcode = $self->patron_prefix_branchcode( $data );
+        return unless $branchcode;
 
         my $cardnumber = $self->next_patron_cardnumber( $data, $branchcode );
         return unless $cardnumber;
@@ -65,6 +67,24 @@ sub patron_barcode_transform {
             $$barcode = --$cardnumber;
         }
     }
+}
+
+sub patron_prefix_branchcode {
+    my ( $self, $data ) = @_;
+
+    # Koha only hands the hooks the barcode, so to follow the library chosen on the patron form we
+    # read the posted form ourselves. Under Plack the body was already read by memberentry.pl, so
+    # rewind it first. If that isn't possible we fall back to the logged in library.
+    if (   ( $data->{patron_prefix_library} // 'login' ) eq 'form'
+        && $ENV{SCRIPT_NAME}
+        && $ENV{SCRIPT_NAME} =~ m{/members/memberentry\.pl$} )
+    {
+        seek( STDIN, 0, 0 );
+        my $branchcode = CGI->new->param('branchcode');
+        return $branchcode if $branchcode;
+    }
+
+    return C4::Context->userenv ? C4::Context->userenv->{branch} : undef;
 }
 
 sub next_patron_cardnumber {
@@ -130,18 +150,39 @@ sub intranet_js {
 
     return q{} unless $data->{libraries}->{$branchcode}->{prefill_patron_cardnumber} || $data->{prefill_patron_cardnumber};
 
-    my $cardnumber = $self->next_patron_cardnumber( $data, $branchcode );
-    return q{} unless $cardnumber;
-
-    # The quick add form clones the cardnumber input, so fill in both copies
+    # The quick add form clones the cardnumber input and the library pulldown, so handle both copies.
+    # Only an empty field or the number we filled in ourselves is replaced, never a number that was typed in.
     my $js = <<'JS';
 <script>
 $(document).ready(function() {
-    $("#cardnumber, #cardnumber_quick_add").filter(function() { return !this.value; }).val("__CARDNUMBER__");
+    var last_cardnumber = "";
+    var fill_cardnumber = function( cardnumber ) {
+        $("#cardnumber, #cardnumber_quick_add").filter(function() { return this.value == "" || this.value == last_cardnumber; }).val( cardnumber );
+        last_cardnumber = cardnumber;
+    };
+__FILL__
 });
 </script>
 JS
-    $js =~ s/__CARDNUMBER__/$cardnumber/;
+
+    my $fill;
+    if ( ( $data->{patron_prefix_library} // 'login' ) eq 'form' ) {
+        $fill = <<'JS';
+    var refresh_cardnumber = function( branchcode ) {
+        $.getJSON( "/api/v1/contrib/barcodeprefixer/next_patron_cardnumber", { branchcode: branchcode }, function( data ) {
+            fill_cardnumber( data.cardnumber || "" );
+        });
+    };
+    refresh_cardnumber( $("#libraries").val() );
+    $("#libraries, #libraries_quick_add").on( "change", function() { refresh_cardnumber( $(this).val() ); });
+JS
+    } else {
+        my $cardnumber = $self->next_patron_cardnumber( $data, $branchcode );
+        return q{} unless $cardnumber;
+
+        $fill = qq{    fill_cardnumber( "$cardnumber" );\n};
+    }
+    $js =~ s/__FILL__\n/$fill/;
 
     return $js;
 }
@@ -222,6 +263,8 @@ sub barcode_transform {
     my $data;
     eval { $data = YAML::Load($yaml); };
     return unless $data;
+
+    $branchcode = $self->patron_prefix_branchcode( $data ) if $type eq 'patron';
 
     # Only transform all digit barcodes by default
     return unless $data->{always_transform} || $barcode =~ /^\d*$/;
@@ -353,6 +396,21 @@ sub uninstall() {
     my ( $self, $args ) = @_;
 
     return 1;
+}
+
+sub api_routes {
+    my ( $self, $args ) = @_;
+
+    my $spec_str = $self->mbf_read('openapi.json');
+    my $spec     = decode_json($spec_str);
+
+    return $spec;
+}
+
+sub api_namespace {
+    my ($self) = @_;
+
+    return 'barcodeprefixer';
 }
 
 1;
