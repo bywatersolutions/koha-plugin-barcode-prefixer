@@ -52,43 +52,8 @@ sub patron_barcode_transform {
         eval { $data = YAML::Load( $yaml ); };
         return unless $data;
 
-        my $barcode_length = $data->{libraries}->{$branchcode}->{patron_barcode_length} || $data->{patron_barcode_length};
-        return unless $barcode_length;
-
-        my $barcode_prefix = $data->{libraries}->{$branchcode}->{patron_prefix};
-        return unless $barcode_prefix;
-
-        my $max = Koha::Patrons->search(
-            {
-                -and => [
-                    cardnumber => { -regexp => '^-?[0-9]+$' },
-                    cardnumber => { -regexp => "^$barcode_prefix" },
-                    \[ 'LENGTH(cardnumber) = ?', $barcode_length ],
-                ]
-            },
-            {
-                select => \'CAST(cardnumber AS SIGNED)',
-                as     => ['cast_cardnumber']
-            }
-        )->_resultset->get_column('cast_cardnumber')->max;
-        $max =~ s/^$barcode_prefix//;
-        my $next = $max + 1;
-
-        my $prefix_len  = length( $barcode_prefix );
-        my $next_len    = length($next);
-        my $padding_len = $barcode_length - $prefix_len - $next_len;
-        my $padding     = '0' x $padding_len;
-
-        my $cardnumber = $barcode_prefix . $padding . $next;
-
-        while ( my $patron = Koha::Patrons->find( { cardnumber => $cardnumber } ) )
-        {
-            $next++;
-            $next_len    = length($next);
-            $padding_len = $barcode_length - $prefix_len - $next_len;
-            $padding     = '0' x $padding_len;
-            $cardnumber  = $barcode_prefix . $padding . $next;
-        }
+        my $cardnumber = $self->next_patron_cardnumber( $data, $branchcode );
+        return unless $cardnumber;
 
         # Before Bug 34000, Koha's fixup_cardnumber increments the cardnumber we return, so
         # we need to subtract one before returning it. Bug 34000 makes fixup_cardnumber use
@@ -100,6 +65,85 @@ sub patron_barcode_transform {
             $$barcode = --$cardnumber;
         }
     }
+}
+
+sub next_patron_cardnumber {
+    my ( $self, $data, $branchcode ) = @_;
+
+    my $barcode_length = $data->{libraries}->{$branchcode}->{patron_barcode_length} || $data->{patron_barcode_length};
+    return unless $barcode_length;
+
+    my $barcode_prefix = $data->{libraries}->{$branchcode}->{patron_prefix};
+    return unless $barcode_prefix;
+
+    my $max = Koha::Patrons->search(
+        {
+            -and => [
+                cardnumber => { -regexp => '^-?[0-9]+$' },
+                cardnumber => { -regexp => "^$barcode_prefix" },
+                \[ 'LENGTH(cardnumber) = ?', $barcode_length ],
+            ]
+        },
+        {
+            select => \'CAST(cardnumber AS SIGNED)',
+            as     => ['cast_cardnumber']
+        }
+    )->_resultset->get_column('cast_cardnumber')->max;
+    $max =~ s/^$barcode_prefix//;
+    my $next = $max + 1;
+
+    my $prefix_len  = length( $barcode_prefix );
+    my $next_len    = length($next);
+    my $padding_len = $barcode_length - $prefix_len - $next_len;
+    my $padding     = '0' x $padding_len;
+
+    my $cardnumber = $barcode_prefix . $padding . $next;
+
+    while ( my $patron = Koha::Patrons->find( { cardnumber => $cardnumber } ) )
+    {
+        $next++;
+        $next_len    = length($next);
+        $padding_len = $barcode_length - $prefix_len - $next_len;
+        $padding     = '0' x $padding_len;
+        $cardnumber  = $barcode_prefix . $padding . $next;
+    }
+
+    return $cardnumber;
+}
+
+sub intranet_js {
+    my ( $self ) = @_;
+
+    # Only the patron entry form has a cardnumber field to fill in
+    return q{} unless $ENV{SCRIPT_NAME} && $ENV{SCRIPT_NAME} =~ m{/members/memberentry\.pl$};
+    return q{} unless C4::Context->preference("autoMemberNum");
+
+    my $branchcode = C4::Context->userenv ? C4::Context->userenv->{branch} : undef;
+    return q{} unless $branchcode;
+
+    my $yaml = $self->retrieve_data('yaml_config');
+    return q{} unless $yaml;
+
+    my $data;
+    eval { $data = YAML::Load( $yaml ); };
+    return q{} unless $data;
+
+    return q{} unless $data->{libraries}->{$branchcode}->{prefill_patron_cardnumber} || $data->{prefill_patron_cardnumber};
+
+    my $cardnumber = $self->next_patron_cardnumber( $data, $branchcode );
+    return q{} unless $cardnumber;
+
+    # The quick add form clones the cardnumber input, so fill in both copies
+    my $js = <<'JS';
+<script>
+$(document).ready(function() {
+    $("#cardnumber, #cardnumber_quick_add").filter(function() { return !this.value; }).val("__CARDNUMBER__");
+});
+</script>
+JS
+    $js =~ s/__CARDNUMBER__/$cardnumber/;
+
+    return $js;
 }
 
 sub item_barcode_transform {
