@@ -12,7 +12,7 @@ use CGI;
 use Mojo::JSON qw(decode_json);
 
 our $VERSION = "{VERSION}";
-our $MINIMUM_VERSION = "{MINIMUM_VERSION}";
+our $MINIMUM_VERSION = "24.05";
 
 our $metadata = {
     name            => 'Scanned Barcode Prefixer',
