@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-05
+
 ### Added
 
 - `search_as_barcode_if` option. A search for a term matching this regular
@@ -21,4 +23,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial commit!
 
-[Unreleased]: https://github.com/bywatersolutions/koha-plugin-barcode-prefixer/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/bywatersolutions/koha-plugin-barcode-prefixer/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/bywatersolutions/koha-plugin-barcode-prefixer/compare/v1.8.0...v1.9.0
