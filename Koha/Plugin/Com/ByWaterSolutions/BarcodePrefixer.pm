@@ -9,7 +9,7 @@ use C4::Auth;
 
 use YAML qw(Load Dump);
 use CGI;
-use Mojo::JSON qw(decode_json);
+use Mojo::JSON qw(decode_json to_json);
 
 our $VERSION = "{VERSION}";
 our $MINIMUM_VERSION = "24.05";
@@ -134,7 +134,51 @@ sub next_patron_cardnumber {
 sub intranet_js {
     my ( $self ) = @_;
 
-    return $self->prefill_patron_cardnumber_js;
+    return $self->search_as_barcode_js . $self->prefill_patron_cardnumber_js;
+}
+
+sub search_as_barcode_js {
+    my ( $self ) = @_;
+
+    my $branchcode = C4::Context->userenv ? C4::Context->userenv->{branch} : undef;
+    return q{} unless $branchcode;
+
+    my $yaml = $self->retrieve_data('yaml_config');
+    return q{} unless $yaml;
+
+    my $data;
+    eval { $data = YAML::Load( $yaml ); };
+    return q{} unless $data;
+
+    my $search_as_barcode_if = $data->{libraries}->{$branchcode}->{search_as_barcode_if} || $data->{search_as_barcode_if};
+    return q{} unless $search_as_barcode_if;
+
+    # Koha already runs barcodes searched on the Barcode index through item_barcode_transform,
+    # so rather than prefixing anything here a matching keyword search is switched to that index.
+    my $js = <<'JS';
+<script>
+$(document).ready(function() {
+    var search_as_barcode_if = new RegExp( __REGEX__ );
+    $("#cat-search-block").on( "submit", function(e) {
+        var params = new URLSearchParams( $(this).serialize() );
+
+        // Leave any index other than the default keyword search alone
+        if ( ( params.get("idx") || "kw" ) != "kw" ) return;
+        if ( !search_as_barcode_if.test( params.get("q").trim() ) ) return;
+
+        // Go to the barcode search rather than changing the form, the back button can bring back the changed form
+        e.preventDefault();
+        params.set( "idx", "bc" );
+        window.location = this.action + "?" + params;
+    });
+});
+</script>
+JS
+
+    my $regex = to_json($search_as_barcode_if);
+    $js =~ s/__REGEX__/$regex/;
+
+    return $js;
 }
 
 sub prefill_patron_cardnumber_js {
