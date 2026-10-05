@@ -37,6 +37,7 @@ libraries:
     item_prefix: 3001
     patron_prefix: 3002
     prefill_patron_cardnumber: 1
+    search_as_barcode_if: '^\d{5}$'
 ```
 
 ### How barcodes are prefixed
@@ -57,6 +58,7 @@ Regular expressions let you leave some barcodes alone. A barcode is only prefixe
 | `auto_barcode` | none | Set to `incremental` to generate the next item barcode when an item is added without one. See below. |
 | `prefill_patron_cardnumber` | `0` | Set to `1` to show the next patron cardnumber on the patron entry form before saving. See below. |
 | `patron_prefix_library` | `login` | Set to `form` to use the library chosen on the patron entry form instead of the logged in library. See below. |
+| `search_as_barcode_if` | none | Regular expression. A staff catalog search for a term matching it is run as a barcode search, so the barcode is prefixed. See below. |
 | `only_prefix_if` | none | Regular expression a barcode must match to be prefixed, e.g. `^1` only prefixes barcodes starting with 1. |
 | `only_prefix_if_item` | none | Same, item barcodes only. |
 | `only_prefix_if_patron` | none | Same, patron cardnumbers only. |
@@ -76,6 +78,7 @@ Each key under `libraries` is a Koha branchcode. A library needs an `item_prefix
 | `patron_barcode_length` | Overrides the global `patron_barcode_length` for this library. |
 | `prefix_without_padding` | Set to `1` to always prepend the prefix without any zero padding, whatever the length of the scanned barcode. No `*_barcode_length` is needed. |
 | `prefill_patron_cardnumber` | Set to `1` to enable the prefill for staff logged in at this library only. |
+| `search_as_barcode_if` | Overrides the global `search_as_barcode_if` for staff logged in at this library. |
 | `only_prefix_if`, `only_prefix_if_item`, `only_prefix_if_patron` | Library level versions of the global expressions. Both levels apply. |
 | `never_prefix_if`, `never_prefix_if_item`, `never_prefix_if_patron` | Library level versions of the global expressions. Both levels apply. |
 
@@ -98,3 +101,9 @@ Outside of the patron entry form ( self registration, imports, SIP ) the logged 
 ### Auto-generated item barcodes
 
 With `auto_barcode: incremental`, an item saved without a barcode ( the item editor, imports, the REST API ) gets the library's `item_prefix`, zero padding, and the number after the highest item barcode already in use with that prefix and `item_barcode_length`. Both settings are required for the library. Any other value, or leaving `auto_barcode` out, disables this.
+
+### Scanning barcodes into the catalog search
+
+Koha prefixes barcodes searched on the Barcode index of the staff catalog search, but the Search catalog box at the top of the staff interface does a keyword search by default, and a keyword search for a short barcode finds nothing. Set `search_as_barcode_if` to a regular expression that matches your short barcodes, e.g. `'^\d{5}$'` for five digit barcodes, and a search for a matching term is run on the Barcode index instead, so the barcode is prefixed like it is at check in.
+
+Every matching search becomes a barcode search, so make the expression as narrow as you can. A five digit expression also catches a search for a five digit number that isn't a barcode. An index picked from the search pulldown ( `IntranetCatalogSearchPulldown` ) other than Keyword is left alone, and Advanced search is not affected. The expression is checked by the browser, so it is a JavaScript regular expression. Quote it in the YAML.
