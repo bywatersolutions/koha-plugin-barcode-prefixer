@@ -134,6 +134,12 @@ sub next_patron_cardnumber {
 sub intranet_js {
     my ( $self ) = @_;
 
+    return $self->prefill_patron_cardnumber_js;
+}
+
+sub prefill_patron_cardnumber_js {
+    my ( $self ) = @_;
+
     # Only the patron entry form has a cardnumber field to fill in
     return q{} unless $ENV{SCRIPT_NAME} && $ENV{SCRIPT_NAME} =~ m{/members/memberentry\.pl$};
     return q{} unless C4::Context->preference("autoMemberNum");
