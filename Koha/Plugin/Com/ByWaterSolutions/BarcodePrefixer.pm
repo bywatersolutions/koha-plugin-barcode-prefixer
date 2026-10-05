@@ -159,6 +159,14 @@ sub search_as_barcode_js {
 <script>
 $(document).ready(function() {
     var search_as_barcode_if = new RegExp( __REGEX__ );
+
+    // Koha selects the index of the last search in the pulldown, so put it back to Keyword
+    // after a search we switched or the next search typed in would be a barcode search too
+    var last_search = new URLSearchParams( window.location.search );
+    if ( last_search.get("idx") == "bc" && search_as_barcode_if.test( ( last_search.get("q") || "" ).trim() ) ) {
+        $("#cat-search-block select[name='idx']").val("kw");
+    }
+
     $("#cat-search-block").on( "submit", function(e) {
         var params = new URLSearchParams( $(this).serialize() );
 
