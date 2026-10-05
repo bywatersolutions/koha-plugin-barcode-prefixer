@@ -9,7 +9,7 @@ BEGIN {
 }
 
 use Test::NoWarnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 # A dev install has the literal placeholder "{VERSION}" as its version, which
 # makes every version compare in Koha::Plugins::Base warn. Koha::Plugins loads
@@ -272,6 +272,59 @@ subtest 'intranet_js() tests' => sub {
 
     set_config( { %$data, libraries => {} } );
     is( $plugin->intranet_js, q{}, 'Nothing when the logged in library has no prefix' );
+
+    $schema->storage->txn_rollback;
+};
+
+subtest 'search_as_barcode_js() tests' => sub {
+    plan tests => 9;
+
+    $schema->storage->txn_begin;
+
+    my $library_a = $builder->build_object( { class => 'Koha::Libraries' } )->branchcode;
+    my $library_b = $builder->build_object( { class => 'Koha::Libraries' } )->branchcode;
+
+    t::lib::Mocks::mock_userenv( { branchcode => $library_a } );
+    local $ENV{SCRIPT_NAME} = '/cgi-bin/koha/mainpage.pl';
+
+    my $five_digits = 'new RegExp( "^\\\\d{5}$" )';
+
+    set_config( { libraries => { $library_a => { item_prefix => 9873 } } } );
+    is( $plugin->search_as_barcode_js, q{}, 'Nothing when search_as_barcode_if is not set' );
+
+    set_config( { search_as_barcode_if => '^\d{5}$' } );
+    my $js = $plugin->search_as_barcode_js;
+    like( $js, qr/\Q$five_digits\E/, 'Expression is handed to the browser as a JSON string' );
+    like( $js, qr/params\.set\( "idx", "bc" \)/, 'Matching keyword searches are switched to the Barcode index' );
+    is( $plugin->intranet_js, $js, 'Catalog search JS is added outside of the patron entry form' );
+
+    set_config(
+        {
+            search_as_barcode_if => '^\d{4}$',
+            libraries            => { $library_a => { search_as_barcode_if => '^\d{5}$' } },
+        }
+    );
+    like( $plugin->search_as_barcode_js, qr/\Q$five_digits\E/, 'Library level search_as_barcode_if wins over the global one' );
+
+    set_config( { libraries => { $library_b => { search_as_barcode_if => '^\d{5}$' } } } );
+    is( $plugin->search_as_barcode_js, q{}, 'Nothing for a library without search_as_barcode_if' );
+
+    set_config( { search_as_barcode_if => '</script>' } );
+    unlike( $plugin->search_as_barcode_js, qr{RegExp\( "</script>}, 'Expression cannot close the script tag' );
+
+    local $ENV{SCRIPT_NAME} = '/cgi-bin/koha/members/memberentry.pl';
+    t::lib::Mocks::mock_preference( 'autoMemberNum', 1 );
+    set_config(
+        {
+            search_as_barcode_if      => '^\d{5}$',
+            patron_barcode_length     => 12,
+            prefill_patron_cardnumber => 1,
+            libraries                 => { $library_a => { patron_prefix => 9871 } },
+        }
+    );
+    $js = $plugin->intranet_js;
+    like( $js, qr/\Q$five_digits\E/, 'Catalog search JS is added on the patron entry form' );
+    like( $js, qr/fill_cardnumber\( "987100000001" \)/, 'Cardnumber prefill JS is still added on the patron entry form' );
 
     $schema->storage->txn_rollback;
 };
